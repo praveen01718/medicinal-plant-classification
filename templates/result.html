@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Botanica — Result</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+<style>
+:root {
+    --forest:    #1a3329;
+    --moss:      #2d5240;
+    --sage:      #5a7d6a;
+    --parchment: #f5f0e4;
+    --cream:     #faf7f0;
+    --copper:    #b8732a;
+    --gold:      #d4a847;
+    --ink:       #1e1a14;
+    --muted:     #6b6355;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+    font-family: 'Crimson Text', Georgia, serif;
+    background: url("/static/bg.jpeg") center center / cover no-repeat fixed;
+    color: var(--ink);
+    min-height: 100vh;
+}
+.container { max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem 4rem; animation: fadeIn 0.4s ease both; }
+
+/* Back button */
+.back-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--sage); text-decoration: none;
+    border: 1px solid rgba(90,125,106,0.3); border-radius: 3px;
+    padding: 0.45rem 0.9rem; margin-bottom: 1.75rem;
+    transition: background 0.2s, color 0.2s;
+}
+.back-btn:hover { background: rgba(90,125,106,0.1); color: var(--moss); }
+
+/* Uploaded image */
+.specimen-img-wrap { margin-bottom: 1rem; }
+.specimen-img {
+    width: 100%; max-height: 320px; object-fit: cover;
+    border-radius: 4px; border: 1px solid rgba(90,125,106,0.2);
+    display: block;
+}
+.img-caption { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-top: 0.4rem; opacity: 0.7; }
+
+/* Result card */
+.result-card { background: var(--forest); background-image: radial-gradient(ellipse at top left,rgba(90,125,106,0.2),transparent 70%); border-radius: 4px; padding: 2rem 2.25rem; margin-top: 1rem; box-shadow: 0 6px 32px rgba(26,51,41,0.25),inset 0 1px 0 rgba(212,168,71,0.2); position: relative; overflow: hidden; animation: fadeUp 0.5s ease both; }
+.result-card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 120px; height: 120px; background: radial-gradient(circle,rgba(212,168,71,0.08),transparent 70%); pointer-events: none; }
+.result-tag { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); opacity: 0.8; margin-bottom: 0.4rem; }
+.result-plant-name { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 700; color: var(--parchment); font-style: italic; line-height: 1.1; margin-bottom: 0.3rem; }
+.result-subtitle { font-family: 'Crimson Text', serif; font-size: 1.05rem; color: rgba(245,240,228,0.55); font-style: italic; margin-bottom: 1.2rem; }
+.confidence-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; color: rgba(245,240,228,0.5); text-transform: uppercase; margin-bottom: 0.35rem; display: flex; justify-content: space-between; }
+.confidence-value { color: var(--gold); }
+.confidence-bar-bg { height: 3px; background: rgba(245,240,228,0.1); border-radius: 2px; overflow: hidden; }
+.confidence-bar-fill { height: 100%; background: linear-gradient(90deg,var(--sage),var(--gold)); border-radius: 2px; width: 0; transition: width 1s cubic-bezier(0.16,1,0.3,1); }
+
+/* Shared info card */
+.info-card { background: var(--parchment); border: 1px solid rgba(90,125,106,0.18); border-radius: 4px; padding: 1.6rem 1.75rem; margin-top: 1rem; animation: fadeUp 0.5s ease both; }
+.card-heading { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--copper); letter-spacing: 0.05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.card-heading.green { color: var(--moss); }
+.card-heading.forest { color: var(--forest); }
+.detail-scientific { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-style: italic; color: var(--moss); margin-bottom: 0.35rem; }
+.detail-meta { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.detail-meta-sep { color: rgba(107,99,85,0.4); }
+.detail-desc { font-family: 'Crimson Text', serif; font-size: 1.05rem; color: var(--ink); line-height: 1.65; margin-bottom: 1.1rem; }
+.compounds-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--copper); margin-bottom: 0.5rem; }
+.compounds-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.compound-tag { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.07em; background: rgba(90,125,106,0.1); color: var(--moss); border: 1px solid rgba(90,125,106,0.25); border-radius: 2px; padding: 0.22rem 0.55rem; }
+
+/* Uses list */
+.uses-list { list-style: none; padding: 0; margin: 0; }
+.uses-list li { font-family: 'Crimson Text', serif; font-size: 1.05rem; color: var(--ink); padding: 0.4rem 0; border-bottom: 1px solid rgba(90,125,106,0.12); display: flex; align-items: flex-start; gap: 0.6rem; line-height: 1.5; }
+.uses-list li:last-child { border-bottom: none; }
+.use-dot { color: var(--sage); margin-top: 0.15rem; flex-shrink: 0; font-size: 0.7rem; }
+
+/* Parts tabs */
+.parts-tabs { display: flex; gap: 0; border: 1px solid rgba(90,125,106,0.2); border-radius: 3px; overflow: hidden; margin-bottom: 1.1rem; }
+.part-tab { flex: 1; padding: 0.5rem 0.6rem; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; background: transparent; border: none; border-right: 1px solid rgba(90,125,106,0.2); color: var(--muted); cursor: pointer; transition: background 0.2s, color 0.2s; }
+.part-tab:last-child { border-right: none; }
+.part-tab:hover { background: rgba(90,125,106,0.08); color: var(--moss); }
+.part-tab.active { background: var(--moss); color: var(--parchment); }
+.part-panel { display: none; }
+.part-panel.active { display: block; }
+
+/* Industry grid */
+.industry-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 0.85rem; margin-top: 0.5rem; }
+.industry-cell { background: rgba(245,240,228,0.7); border: 1px solid rgba(90,125,106,0.15); border-radius: 3px; padding: 1rem 1.1rem; }
+.industry-cell-title { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--copper); margin-bottom: 0.6rem; }
+
+/* Leaf card */
+.leaf-card { background: var(--forest); background-image: radial-gradient(ellipse at bottom right,rgba(90,125,106,0.15),transparent 60%); border-radius: 4px; padding: 1.75rem 2rem; margin-top: 1rem; animation: fadeUp 0.5s 0.1s ease both; }
+.leaf-card .card-heading { color: var(--gold); }
+.leaf-card .uses-list li { color: var(--parchment); border-bottom-color: rgba(212,168,71,0.12); }
+.leaf-card .uses-list li:last-child { border-bottom: none; }
+.leaf-card .use-dot { color: rgba(138,173,151,0.7); }
+
+/* Footer */
+.app-footer { text-align: center; margin-top: 3.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(90,125,106,0.2); }
+.app-footer p { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; color: #ffffff; text-transform: uppercase; opacity: 0.6; }
+
+/* No-result state */
+.no-result { text-align: center; padding: 4rem 2rem; }
+.no-result p { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.12em; margin-bottom: 1.5rem; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-btn">← Analyse Another Plant</a>
+
+    <div id="no-result" class="no-result" style="display:none">
+        <p>No result found. Please go back and upload an image.</p>
+        <a href="/" class="back-btn">← Go Back</a>
+    </div>
+
+    <div id="result-wrap" style="display:none">
+        <div class="specimen-img-wrap">
+            <img id="specimen-img" class="specimen-img" src="" alt="Uploaded specimen" />
+            <div class="img-caption">Uploaded specimen</div>
+        </div>
+
+        <div class="result-card">
+            <div class="result-tag">Classification Result</div>
+            <div class="result-plant-name" id="result-name"></div>
+            <div class="result-subtitle" id="result-subtitle"></div>
+            <div class="confidence-label">
+                <span>Model Confidence</span>
+                <span class="confidence-value" id="conf-value"></span>
+            </div>
+            <div class="confidence-bar-bg"><div class="confidence-bar-fill" id="conf-bar"></div></div>
+        </div>
+
+        <div class="info-card" id="sci-card">
+            <div class="detail-scientific" id="detail-scientific"></div>
+            <div class="detail-meta" id="detail-meta"></div>
+            <p class="detail-desc" id="detail-desc"></p>
+            <div class="compounds-label">Active Compounds</div>
+            <div class="compounds-wrap" id="compounds-wrap"></div>
+        </div>
+
+        <div class="leaf-card" id="leaf-card" style="display:none">
+            <div class="card-heading">🍃 Leaf Uses — Detailed</div>
+            <ul class="uses-list" id="leaf-uses-list"></ul>
+        </div>
+
+        <div class="info-card" id="general-card" style="display:none">
+            <div class="card-heading green">🌿 General Medicinal Uses</div>
+            <ul class="uses-list" id="general-uses-list"></ul>
+        </div>
+
+        <div class="info-card" id="parts-card" style="display:none">
+            <div class="card-heading forest">🌱 Usage by Plant Parts</div>
+            <div class="parts-tabs" id="parts-tabs"></div>
+            <div id="parts-panels"></div>
+        </div>
+
+        <div class="info-card" id="industry-card" style="display:none">
+            <div class="card-heading">🏭 Industrial &amp; Manufacturing Uses</div>
+            <div class="industry-grid" id="industry-grid"></div>
+        </div>
+    </div>
+
+    <div class="app-footer"><p>Botanica · Medicinal Plant Classifier · For educational use only</p></div>
+</div>
+
+<script>
+const raw = sessionStorage.getItem('botanica_result');
+if (!raw) {
+    document.getElementById('no-result').style.display = 'block';
+} else {
+    const data = JSON.parse(raw);
+    const d = data.details || {};
+    document.getElementById('result-wrap').style.display = 'block';
+
+    if (data.imageDataUrl) {
+        document.getElementById('specimen-img').src = data.imageDataUrl;
+    }
+
+    document.getElementById('result-name').textContent     = `${data.icon} ${data.plant}`;
+    document.getElementById('result-subtitle').textContent = d.subtitle || '';
+    document.getElementById('conf-value').textContent      = `${data.confidence.toFixed(2)}%`;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.getElementById('conf-bar').style.width = `${data.confidence.toFixed(1)}%`;
+    }));
+
+    document.getElementById('detail-scientific').textContent = d.scientific_name || '';
+    document.getElementById('detail-meta').innerHTML = buildMeta(d.family, d.origin);
+    document.getElementById('detail-desc').textContent = d.description || '';
+    document.getElementById('compounds-wrap').innerHTML = (d.active_compounds || []).map(c => `<span class="compound-tag">${c}</span>`).join('');
+
+    if (d.leaf_uses && d.leaf_uses.length) {
+        document.getElementById('leaf-uses-list').innerHTML = buildList(d.leaf_uses);
+        document.getElementById('leaf-card').style.display = 'block';
+    }
+
+    if (d.general_medicinal_uses && d.general_medicinal_uses.length) {
+        document.getElementById('general-uses-list').innerHTML = buildList(d.general_medicinal_uses);
+        document.getElementById('general-card').style.display = 'block';
+    }
+
+    const parts = [
+        { label: '🍃 Leaf', data: d.leaf_uses  },
+        { label: '🌱 Stem', data: d.stem_uses  },
+        { label: '🌿 Root', data: d.root_uses  },
+    ].filter(p => p.data && p.data.length);
+
+    if (parts.length) {
+        const tabsEl   = document.getElementById('parts-tabs');
+        const panelsEl = document.getElementById('parts-panels');
+        parts.forEach((p, i) => {
+            const btn = document.createElement('button');
+            btn.className   = 'part-tab' + (i === 0 ? ' active' : '');
+            btn.textContent = p.label;
+            btn.addEventListener('click', () => {
+                tabsEl.querySelectorAll('.part-tab').forEach(b => b.classList.remove('active'));
+                panelsEl.querySelectorAll('.part-panel').forEach(pn => pn.classList.remove('active'));
+                btn.classList.add('active');
+                panelsEl.children[i].classList.add('active');
+            });
+            tabsEl.appendChild(btn);
+            const panel = document.createElement('div');
+            panel.className = 'part-panel' + (i === 0 ? ' active' : '');
+            panel.innerHTML = `<ul class="uses-list">${buildList(p.data)}</ul>`;
+            panelsEl.appendChild(panel);
+        });
+        document.getElementById('parts-card').style.display = 'block';
+    }
+
+    const industryData = [
+        { title: '💊 Pharmaceutical',      items: d.pharmaceutical_uses },
+        { title: '🌿 Herbal Products',     items: d.herbal_uses },
+        { title: '✨ Cosmetic Applications', items: d.cosmetic_uses },
+    ].filter(c => c.items && c.items.length);
+
+    if (industryData.length) {
+        document.getElementById('industry-grid').innerHTML = industryData.map(c => `
+            <div class="industry-cell">
+                <div class="industry-cell-title">${c.title}</div>
+                <ul class="uses-list">${buildList(c.items)}</ul>
+            </div>
+        `).join('');
+        document.getElementById('industry-card').style.display = 'block';
+    }
+}
+
+function buildList(arr) {
+    return arr.map(u => `<li><span class="use-dot">◆</span>${u}</li>`).join('');
+}
+
+function buildMeta(family, origin) {
+    const parts = [];
+    if (family) parts.push(`<span>${family}</span>`);
+    if (family && origin) parts.push(`<span class="detail-meta-sep">·</span>`);
+    if (origin) parts.push(`<span>${origin}</span>`);
+    return parts.join('');
+}
+</script>
+</body>
+</html>

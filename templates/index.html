@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Botanica — Medicinal Plant Identifier</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+<style>
+:root {
+    --forest:    #1a3329;
+    --moss:      #2d5240;
+    --sage:      #5a7d6a;
+    --parchment: #f5f0e4;
+    --cream:     #faf7f0;
+    --copper:    #b8732a;
+    --gold:      #d4a847;
+    --ink:       #1e1a14;
+    --muted:     #6b6355;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    font-family: 'Crimson Text', Georgia, serif;
+    background: url("/static/bg.jpeg") center center / cover no-repeat fixed;
+    color: var(--ink);
+    min-height: 100vh;
+}
+
+/* ── SCREEN LOADER ── */
+#screen-loader {
+    position: fixed; inset: 0;
+    background: var(--forest);
+    background-image:
+        radial-gradient(ellipse at 30% 40%, rgba(90,125,106,0.3) 0%, transparent 60%),
+        radial-gradient(ellipse at 75% 70%, rgba(212,168,71,0.1) 0%, transparent 50%);
+    z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.75rem;
+    transition: opacity 0.7s ease, visibility 0.7s ease;
+}
+#screen-loader.fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.loader-leaf-wrap { position: relative; width: 80px; height: 80px; }
+.loader-leaf-svg { width: 80px; height: 80px; animation: loaderPulse 2s ease-in-out infinite; }
+.loader-ring {
+    position: absolute; inset: -10px; border-radius: 50%;
+    border: 1px solid rgba(212,168,71,0.15);
+    border-top-color: rgba(212,168,71,0.5);
+    animation: spin 2.5s linear infinite;
+}
+.leaf-outline { stroke-dasharray: 320; stroke-dashoffset: 320; animation: drawPath 1.2s cubic-bezier(0.4,0,0.2,1) 0.1s forwards; }
+.leaf-vein-main { stroke-dasharray: 65; stroke-dashoffset: 65; animation: drawPath 0.7s ease 0.6s forwards; }
+.leaf-vein-l1,.leaf-vein-r1 { stroke-dasharray: 30; stroke-dashoffset: 30; animation: drawPath 0.4s ease 0.9s forwards; }
+.leaf-vein-l2,.leaf-vein-r2 { stroke-dasharray: 25; stroke-dashoffset: 25; animation: drawPath 0.4s ease 1.05s forwards; }
+.leaf-vein-l3,.leaf-vein-r3 { stroke-dasharray: 20; stroke-dashoffset: 20; animation: drawPath 0.4s ease 1.15s forwards; }
+@keyframes drawPath { to { stroke-dashoffset: 0; } }
+@keyframes loaderPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+.loader-title {
+    font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700;
+    color: var(--parchment); letter-spacing: 0.45em; text-transform: uppercase;
+    opacity: 0; animation: fadeLetters 0.9s cubic-bezier(0.4,0,0.2,1) 0.7s forwards;
+}
+@keyframes fadeLetters { from{opacity:0;letter-spacing:0.7em} to{opacity:1;letter-spacing:0.45em} }
+.loader-sub {
+    font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.3em;
+    text-transform:uppercase; color:var(--gold); opacity:0; animation:fadeIn 0.6s ease 1.2s forwards;
+}
+.loader-dots { display:flex; gap:0.4rem; opacity:0; animation:fadeIn 0.4s ease 1.4s forwards; }
+.loader-dot { width:5px; height:5px; border-radius:50%; background:rgba(138,173,151,0.5); }
+.loader-dot:nth-child(1){animation:dotPulse 1.2s 1.5s ease-in-out infinite;}
+.loader-dot:nth-child(2){animation:dotPulse 1.2s 1.65s ease-in-out infinite;}
+.loader-dot:nth-child(3){animation:dotPulse 1.2s 1.8s ease-in-out infinite;}
+@keyframes dotPulse{0%,100%{background:rgba(138,173,151,0.3);transform:scale(1)}50%{background:var(--gold);transform:scale(1.4)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── loader get-started button ── */
+#loader-btn {
+    opacity: 0;
+    animation: fadeIn 0.5s ease 1.8s forwards;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--forest);
+    background: linear-gradient(170deg, #e8c96a, #d4a847);
+    border: none;
+    border-radius: 3px;
+    padding: 0.75rem 2.2rem;
+    cursor: pointer;
+    position: relative;
+
+    /* 3-D stack */
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.4),
+        0 2px 0 #a07820,
+        0 4px 0 #8a6618,
+        0 6px 0 #745510,
+        0 8px 18px rgba(26,51,41,0.4),
+        0 14px 35px rgba(26,51,41,0.2);
+
+    transform: rotateX(6deg);
+    transform-origin: center bottom;
+    transform-style: preserve-3d;
+    transition: transform 0.2s cubic-bezier(0.34,1.4,0.64,1),
+                box-shadow 0.2s ease;
+}
+#loader-btn::before {
+    content: '';
+    position: absolute;
+    bottom: -7px; left: 3px; right: 3px; height: 7px;
+    background: linear-gradient(to bottom, #5c3d08, #3e2905);
+    border-radius: 0 0 4px 4px;
+    transform: rotateX(-90deg);
+    transform-origin: top center;
+}
+#loader-btn::after {
+    content: '';
+    position: absolute; inset: 0; border-radius: 3px;
+    background: linear-gradient(130deg,
+        rgba(255,255,255,0.3) 0%,
+        rgba(255,255,255,0.05) 50%,
+        transparent 70%);
+    pointer-events: none;
+}
+#loader-btn:hover {
+    transform: rotateX(2deg) translateY(-5px);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.5),
+        0 2px 0 #a07820,
+        0 4px 0 #8a6618,
+        0 6px 0 #745510,
+        0 8px 0 #5e4410,
+        0 12px 24px rgba(26,51,41,0.45),
+        0 20px 45px rgba(26,51,41,0.25);
+}
+#loader-btn:active {
+    transform: rotateX(0deg) translateY(5px) !important;
+    box-shadow:
+        inset 0 2px 6px rgba(0,0,0,0.25),
+        0 1px 0 #a07820,
+        0 2px 8px rgba(26,51,41,0.3) !important;
+    transition-duration: 0.07s;
+}
+
+/* ── LAYOUT ── */
+.container { max-width:780px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+
+/* ── NAV TABS — 3-D button row ── */
+.nav-tabs {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    perspective: 700px;
+    background: none;
+    border: none;
+}
+
+.nav-tab {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    padding: 0.75rem 1rem 0.7rem;
+    font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 6px;
+    position: relative;
+    cursor: pointer;
+    transform-style: preserve-3d;
+
+    /* face */
+    background: linear-gradient(170deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 55%),
+                linear-gradient(to bottom, #e4dece, #d5cfbf);
+    color: var(--muted);
+
+    /* stacked bottom edge — 3-D depth */
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.6),
+        inset 0 -1px 0 rgba(0,0,0,0.07),
+        0 2px 0 #bab4a5,
+        0 4px 0 #aaa496,
+        0 6px 0 #9c9789,
+        0 8px 16px rgba(26,51,41,0.18),
+        0 14px 30px rgba(26,51,41,0.1);
+
+    transform: rotateX(8deg);
+    transform-origin: center bottom;
+
+    transition:
+        transform 0.2s cubic-bezier(0.34,1.4,0.64,1),
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+/* sheen */
+.nav-tab::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 6px;
+    background: linear-gradient(130deg,
+        rgba(255,255,255,0.22) 0%,
+        rgba(255,255,255,0.04) 45%,
+        rgba(255,255,255,0) 65%);
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+/* bottom bevel face */
+.nav-tab::before {
+    content: '';
+    position: absolute;
+    bottom: -7px; left: 3px; right: 3px; height: 7px;
+    background: linear-gradient(to bottom, #918c80, #7e7970);
+    border-radius: 0 0 5px 5px;
+    transform: rotateX(-90deg);
+    transform-origin: top center;
+    pointer-events: none;
+}
+
+/* icon */
+.nav-tab span {
+    font-size: 1.1rem;
+    filter: drop-shadow(0 2px 3px rgba(26,51,41,0.2));
+    transition: transform 0.2s cubic-bezier(0.34,1.5,0.64,1), filter 0.2s;
+    display: inline-block;
+}
+
+/* hover — rises */
+.nav-tab:hover {
+    color: var(--moss);
+    transform: rotateX(3deg) translateY(-5px);
+    background: linear-gradient(170deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 55%),
+                linear-gradient(to bottom, #ece6d6, #ddd7c5);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.7),
+        0 2px 0 #c0ba2,
+        0 3px 0 #bab4a5,
+        0 5px 0 #aaa49,
+        0 7px 0 #9c9789,
+        0 9px 0 #908b7e,
+        0 12px 22px rgba(26,51,41,0.22),
+        0 20px 40px rgba(26,51,41,0.12);
+}
+.nav-tab:hover span {
+    transform: translateY(-3px) scale(1.15);
+    filter: drop-shadow(0 4px 6px rgba(26,51,41,0.25));
+}
+
+/* active — pressed down, forest colour */
+.nav-tab.active {
+    color: var(--gold);
+    transform: rotateX(0deg) translateY(4px);
+    background: linear-gradient(170deg, rgba(90,125,106,0.25) 0%, rgba(90,125,106,0) 55%),
+                linear-gradient(to bottom, #1e3d2f, #162e24);
+    box-shadow:
+        inset 0 2px 6px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        0 1px 0 #0e1f18,
+        0 2px 8px rgba(26,51,41,0.35),
+        0 0 0 1px rgba(212,168,71,0.2);
+}
+.nav-tab.active::after { opacity: 0; }
+.nav-tab.active span {
+    transform: translateY(1px);
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+}
+
+/* click press */
+.nav-tab:active {
+    transform: rotateX(0deg) translateY(6px) !important;
+    box-shadow:
+        inset 0 3px 8px rgba(0,0,0,0.3),
+        0 1px 0 #9c9789,
+        0 2px 6px rgba(26,51,41,0.2) !important;
+    transition-duration: 0.07s;
+}
+
+/* ── HERO ── */
+.hero-banner {
+    background: var(--forest);
+    background-image:
+        radial-gradient(ellipse at 15% 60%, rgba(90,125,106,0.3) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 20%, rgba(212,168,71,0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(45,82,64,0.4) 0%, transparent 60%);
+    border-radius:4px; padding:2.75rem 2.5rem 2.25rem; margin-bottom:2rem;
+    position:relative; overflow:hidden;
+    box-shadow:0 8px 40px rgba(26,51,41,0.35),inset 0 1px 0 rgba(212,168,71,0.3);
+}
+.hero-banner::before {
+    content:''; position:absolute; inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Ccircle cx='30' cy='30' r='1' fill='rgba(212,168,71,0.06)'/%3E%3C/svg%3E");
+    pointer-events:none;
+}
+
+/* top bar inside hero */
+.hero-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+.hero-label {
+    font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:0.28em;
+    text-transform:uppercase; color:var(--gold); opacity:0.85;
+}
+.hero-badge {
+    font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:0.2em;
+    text-transform:uppercase; color:rgba(138,173,151,0.7);
+    border:1px solid rgba(138,173,151,0.25); border-radius:2px; padding:0.2rem 0.55rem;
+}
+
+/* Main hero body — two columns */
+.hero-body {
+    display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
+}
+.hero-text { flex: 1; min-width: 0; }
+
+/* BOTANICA big title */
+.hero-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.6rem;
+    font-weight: 700;
+    color: var(--parchment);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    margin-bottom: 0.35rem;
+}
+.hero-brand em { font-style: italic; color: var(--gold); }
+
+.hero-divider { width:50px; height:1.5px; background:linear-gradient(90deg,var(--gold),transparent); margin:0.9rem 0; }
+
+.hero-tagline {
+    font-family:'Crimson Text',serif; font-size:1.15rem;
+    color:rgba(245,240,228,0.75); font-style:italic;
+    margin-bottom:0.5rem; line-height:1.4;
+}
+.hero-sub {
+    font-family:'Crimson Text',serif; font-size:0.95rem;
+    color:rgba(245,240,228,0.45); font-style:italic;
+}
+
+/* 3 botanical illustration cards */
+.hero-illustrations {
+    display: flex; flex-direction: column; gap: 0.55rem; flex-shrink: 0;
+}
+.hero-illus-card {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(138,173,151,0.18);
+    border-radius: 3px;
+    padding: 0.45rem 0.75rem 0.45rem 0.5rem;
+    transition: border-color 0.2s, background 0.2s;
+}
+.hero-illus-card:hover {
+    border-color: rgba(212,168,71,0.3);
+    background: rgba(255,255,255,0.07);
+}
+.hero-illus-svg { width: 36px; height: 36px; flex-shrink: 0; }
+.hero-illus-label {
+    font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:0.18em;
+    text-transform:uppercase; color:rgba(245,240,228,0.5);
+    line-height: 1.3;
+}
+.hero-illus-label strong {
+    display:block; font-size:0.65rem; color:rgba(245,240,228,0.85);
+    font-weight:400; margin-bottom:0.1rem;
+}
+
+@media(max-width:560px) {
+    .hero-brand { font-size: 2.6rem; }
+    .hero-illustrations { flex-direction: row; flex-wrap: wrap; }
+    .hero-illus-card { flex:1; min-width:80px; }
+}
+@media(max-width:420px) {
+    .hero-body { flex-direction: column; }
+    .hero-illustrations { flex-direction: row; width:100%; }
+}
+
+/* ── UPLOAD ── */
+.upload-label{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--copper);margin-bottom:0.4rem;}
+.upload-hint{font-family:'Crimson Text',serif;font-size:1rem;color:#ffffff;font-style:italic;margin-bottom:1rem;}
+
+/* 3-D drop zone */
+.drop-zone-wrap {
+    perspective: 900px;
+    margin-bottom: 0;
+}
+
+.drop-zone {
+    position: relative;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 2.8rem 1.5rem 2.6rem;
+    text-align: center;
+
+    /* layered background — top face */
+    background:
+        linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(to bottom, #e8e2d4, #ddd7c7);
+    border: none;
+
+    /* 3-D multi-layer box shadow: top-highlight, main depth, bottom plate */
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.65),
+        inset 0 -1px 0 rgba(0,0,0,0.08),
+        0 2px 0 #bfb9aa,
+        0 4px 0 #b0aa9c,
+        0 6px 0 #a3a090,
+        0 8px 0 #979488,
+        0 10px 20px rgba(26,51,41,0.22),
+        0 16px 40px rgba(26,51,41,0.12);
+
+    transform: rotateX(4deg);
+    transform-origin: center bottom;
+    transform-style: preserve-3d;
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow 0.25s ease,
+                background 0.25s ease;
+
+    /* dashed border via outline offset trick — drawn on the face */
+    outline: 1.5px dashed rgba(90,125,106,0.4);
+    outline-offset: -12px;
+}
+
+.drop-zone::before {
+    /* front bottom edge bevel */
+    content: '';
+    position: absolute;
+    bottom: -11px; left: 4px; right: 4px;
+    height: 11px;
+    background: linear-gradient(to bottom, #9a9486, #87817a);
+    border-radius: 0 0 6px 6px;
+    transform: rotateX(-90deg);
+    transform-origin: top center;
+}
+
+.drop-zone::after {
+    /* sheen sweep */
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: linear-gradient(120deg,
+        rgba(255,255,255,0.18) 0%,
+        rgba(255,255,255,0.04) 40%,
+        rgba(255,255,255,0) 60%);
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+/* hover — rises up */
+.drop-zone:hover {
+    transform: rotateX(1deg) translateY(-5px);
+    outline-color: var(--copper);
+    background:
+        linear-gradient(160deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(to bottom, #ede7d6, #e3dcc9);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.7),
+        inset 0 -1px 0 rgba(0,0,0,0.06),
+        0 2px 0 #c4be30,
+        0 4px 0 #bfb9aa,
+        0 6px 0 #b0aa9c,
+        0 8px 0 #a3a090,
+        0 10px 0 #979488,
+        0 14px 28px rgba(26,51,41,0.25),
+        0 24px 50px rgba(26,51,41,0.14);
+}
+
+/* drag-over — slams flat with gold outline */
+.drop-zone.drag-over {
+    transform: rotateX(0deg) translateY(6px);
+    outline-color: var(--gold);
+    outline-width: 2px;
+    background:
+        linear-gradient(160deg, rgba(212,168,71,0.08) 0%, rgba(212,168,71,0) 60%),
+        linear-gradient(to bottom, #f0eadb, #e5dece);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.5),
+        0 1px 0 #bfb9aa,
+        0 2px 0 #b0aa9c,
+        0 4px 12px rgba(26,51,41,0.18),
+        0 0 0 3px rgba(212,168,71,0.25);
+}
+.drop-zone.drag-over::after { opacity: 0; }
+
+.drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2;}
+
+/* icon with 3-D lift */
+.drop-zone-icon {
+    display: block;
+    font-size: 2.4rem;
+    margin-bottom: 0.65rem;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 6px rgba(26,51,41,0.25));
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), filter 0.25s ease;
+}
+.drop-zone:hover .drop-zone-icon {
+    transform: translateY(-4px) scale(1.08);
+    filter: drop-shadow(0 8px 12px rgba(26,51,41,0.3));
+}
+.drop-zone.drag-over .drop-zone-icon {
+    transform: translateY(2px) scale(0.96);
+}
+
+.drop-zone-text{font-family:'Crimson Text',serif;font-size:1.08rem;color:var(--moss);pointer-events:none;font-weight:600;}
+.drop-zone-sub{font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:0.14em;color:var(--muted);margin-top:0.4rem;pointer-events:none;}
+
+#preview-wrap{margin-top:1.25rem;display:none;}
+#preview-img{width:100%;border-radius:3px;box-shadow:0 4px 24px rgba(26,51,41,0.15),0 0 0 1px rgba(90,125,106,0.2);display:block;}
+.img-caption{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;text-align:center;margin-top:0.4rem;}
+
+#analyse-btn{font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;background:var(--forest);color:var(--parchment);border:1px solid var(--sage);border-radius:2px;padding:0.65rem 1.75rem;cursor:pointer;margin-top:1.25rem;transition:background 0.2s,border-color 0.2s,color 0.2s;display:none;}
+#analyse-btn:hover{background:var(--moss);border-color:var(--gold);color:var(--gold);}
+#analyse-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+.spinner{display:none;align-items:center;gap:0.6rem;margin-top:1.25rem;font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;}
+.spinner-ring{width:18px;height:18px;border:2px solid rgba(90,125,106,0.2);border-top-color:var(--sage);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;}
+.error-msg{font-family:'DM Mono',monospace;font-size:0.75rem;color:#c0392b;letter-spacing:0.08em;margin-top:1rem;display:none;}
+
+/* ── RESULT CARD (Plant Name + Confidence) ── */
+.result-card{background:var(--forest);background-image:radial-gradient(ellipse at top left,rgba(90,125,106,0.2),transparent 70%);border-radius:4px;padding:2rem 2.25rem;margin-top:1.75rem;box-shadow:0 6px 32px rgba(26,51,41,0.25),inset 0 1px 0 rgba(212,168,71,0.2);position:relative;overflow:hidden;animation:fadeUp 0.5s ease both;display:none;}
+.result-card::after{content:'';position:absolute;bottom:0;right:0;width:120px;height:120px;background:radial-gradient(circle,rgba(212,168,71,0.08),transparent 70%);pointer-events:none;}
+.result-tag{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--gold);opacity:0.8;margin-bottom:0.4rem;}
+.result-plant-name{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;color:var(--parchment);font-style:italic;line-height:1.1;margin-bottom:0.3rem;}
+.result-subtitle{font-family:'Crimson Text',serif;font-size:1.05rem;color:rgba(245,240,228,0.55);font-style:italic;margin-bottom:1.2rem;}
+.confidence-label{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;color:rgba(245,240,228,0.5);text-transform:uppercase;margin-bottom:0.35rem;display:flex;justify-content:space-between;}
+.confidence-value{color:var(--gold);}
+.confidence-bar-bg{height:3px;background:rgba(245,240,228,0.1);border-radius:2px;overflow:hidden;}
+.confidence-bar-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--gold));border-radius:2px;width:0;transition:width 1s cubic-bezier(0.16,1,0.3,1);}
+
+/* ── SHARED CARD ── */
+.info-card{background:var(--parchment);border:1px solid rgba(90,125,106,0.18);border-radius:4px;padding:1.6rem 1.75rem;margin-top:1rem;animation:fadeUp 0.5s ease both;display:none;}
+.card-heading{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--copper);letter-spacing:0.05em;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;}
+.card-heading.green{color:var(--moss);}
+.card-heading.forest{color:var(--forest);}
+
+/* ── SCIENTIFIC INFO ── */
+.detail-scientific{font-family:'Playfair Display',serif;font-size:1.15rem;font-style:italic;color:var(--moss);margin-bottom:0.35rem;}
+.detail-meta{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:0.3rem;align-items:center;}
+.detail-meta-sep{color:rgba(107,99,85,0.4);}
+.detail-desc{font-family:'Crimson Text',serif;font-size:1.05rem;color:var(--ink);line-height:1.65;margin-bottom:1.1rem;}
+.compounds-label{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--copper);margin-bottom:0.5rem;}
+.compounds-wrap{display:flex;flex-wrap:wrap;gap:0.4rem;}
+.compound-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.07em;background:rgba(90,125,106,0.1);color:var(--moss);border:1px solid rgba(90,125,106,0.25);border-radius:2px;padding:0.22rem 0.55rem;}
+
+/* ── USES LIST ── */
+.uses-list{list-style:none;padding:0;margin:0;}
+.uses-list li{font-family:'Crimson Text',serif;font-size:1.05rem;color:var(--ink);padding:0.4rem 0;border-bottom:1px solid rgba(90,125,106,0.12);display:flex;align-items:flex-start;gap:0.6rem;line-height:1.5;}
+.uses-list li:last-child{border-bottom:none;}
+.use-dot{color:var(--sage);margin-top:0.15rem;flex-shrink:0;font-size:0.7rem;}
+
+/* ── PARTS TABS ── */
+.parts-tabs{display:flex;gap:0;border:1px solid rgba(90,125,106,0.2);border-radius:3px;overflow:hidden;margin-bottom:1.1rem;}
+.part-tab{flex:1;padding:0.5rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;background:transparent;border:none;border-right:1px solid rgba(90,125,106,0.2);color:var(--muted);cursor:pointer;transition:background 0.2s,color 0.2s;}
+.part-tab:last-child{border-right:none;}
+.part-tab:hover{background:rgba(90,125,106,0.08);color:var(--moss);}
+.part-tab.active{background:var(--moss);color:var(--parchment);}
+.part-panel{display:none;}
+.part-panel.active{display:block;}
+
+/* ── INDUSTRIAL GRID ── */
+.industry-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.85rem;margin-top:0.5rem;}
+.industry-cell{background:rgba(245,240,228,0.7);border:1px solid rgba(90,125,106,0.15);border-radius:3px;padding:1rem 1.1rem;}
+.industry-cell-title{font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--copper);margin-bottom:0.6rem;}
+
+/* ── LEAF USES CARD ── */
+.leaf-card{background:var(--forest);background-image:radial-gradient(ellipse at bottom right,rgba(90,125,106,0.15),transparent 60%);border-radius:4px;padding:1.75rem 2rem;margin-top:1rem;animation:fadeUp 0.5s 0.1s ease both;display:none;}
+.leaf-card .card-heading{color:var(--gold);}
+.leaf-card .uses-list li{color:var(--parchment);border-bottom-color:rgba(212,168,71,0.12);}
+.leaf-card .uses-list li:last-child{border-bottom:none;}
+.leaf-card .use-dot{color:rgba(138,173,151,0.7);}
+
+/* ── FOOTER ── */
+.app-footer{text-align:center;margin-top:3.5rem;padding-top:1.5rem;border-top:1px solid rgba(90,125,106,0.2);}
+.app-footer p{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;color:#ffffff;text-transform:uppercase;opacity:0.6;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- SCREEN LOADER -->
+<div id="screen-loader">
+    <div class="loader-leaf-wrap">
+        <div class="loader-ring"></div>
+        <svg class="loader-leaf-svg" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="leaf-outline" d="M50 110 C50 110,8 72,8 40 C8 16,28 6,50 12 C72 6,92 16,92 40 C92 72,50 110,50 110 Z" stroke="rgba(138,173,151,0.7)" stroke-width="1.5"/>
+            <line class="leaf-vein-main" x1="50" y1="110" x2="50" y2="14" stroke="rgba(212,168,71,0.5)" stroke-width="1"/>
+            <line class="leaf-vein-l1" x1="50" y1="75" x2="24" y2="55" stroke="rgba(212,168,71,0.35)" stroke-width="0.8"/>
+            <line class="leaf-vein-l2" x1="50" y1="58" x2="20" y2="42" stroke="rgba(212,168,71,0.3)" stroke-width="0.8"/>
+            <line class="leaf-vein-l3" x1="50" y1="42" x2="24" y2="28" stroke="rgba(212,168,71,0.25)" stroke-width="0.8"/>
+            <line class="leaf-vein-r1" x1="50" y1="75" x2="76" y2="55" stroke="rgba(212,168,71,0.35)" stroke-width="0.8"/>
+            <line class="leaf-vein-r2" x1="50" y1="58" x2="80" y2="42" stroke="rgba(212,168,71,0.3)" stroke-width="0.8"/>
+            <line class="leaf-vein-r3" x1="50" y1="42" x2="76" y2="28" stroke="rgba(212,168,71,0.25)" stroke-width="0.8"/>
+        </svg>
+    </div>
+    <div class="loader-title">Welcome To Botanica</div>
+    <!-- <div class="loader-title">Botanica</div> -->
+    <div class="loader-sub">Botanical Intelligence · Initialising</div>
+    <div class="loader-dots">
+        <div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div>
+    </div>
+    <button id="loader-btn">Get Started</button>
+
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+
+    <!-- Nav tabs -->
+    <nav class="nav-tabs">
+        <a href="/plant" class="nav-tab {% if page_type == 'plant' %}active{% endif %}"><span>🌿</span> Whole Plant</a>
+        <a href="/leaf"  class="nav-tab {% if page_type == 'leaf'  %}active{% endif %}"><span>🍃</span> Leaf</a>
+        <a href="/stem"  class="nav-tab {% if page_type == 'stem'  %}active{% endif %}"><span>🌱</span> Stem</a>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero-banner">
+
+        <!-- top label row -->
+        <div class="hero-top">
+            <div class="hero-label">Botanical Intelligence · v1.0</div>
+        </div>
+
+        <!-- two-column body -->
+        <div class="hero-body">
+
+            <!-- left: text -->
+            <div class="hero-text">
+                <div class="hero-brand"><em>Botanica</em></div>
+                <div class="hero-divider"></div>
+                <div class="hero-tagline">Medicinal Plants Analysis</div>
+                <div class="hero-sub">{{ hero_sub }}</div>
+            </div>
+
+            <!-- right: 3 botanical SVG illustration cards -->
+            <div class="hero-illustrations">
+
+                <!-- PLANT illustration -->
+                <div class="hero-illus-card">
+                    <svg class="hero-illus-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- stem -->
+                        <line x1="18" y1="34" x2="18" y2="10" stroke="rgba(138,173,151,0.7)" stroke-width="1.4" stroke-linecap="round"/>
+                        <!-- left branch -->
+                        <path d="M18 24 C14 22,9 18,10 13 C13 14,16 18,18 20" stroke="rgba(138,173,151,0.6)" stroke-width="1.1" stroke-linecap="round" fill="rgba(90,125,106,0.25)"/>
+                        <!-- right branch -->
+                        <path d="M18 20 C22 18,27 14,26 9 C23 10,20 14,18 16" stroke="rgba(138,173,151,0.6)" stroke-width="1.1" stroke-linecap="round" fill="rgba(90,125,106,0.25)"/>
+                        <!-- top leaf -->
+                        <path d="M18 10 C15 6,15 2,18 2 C21 2,21 6,18 10 Z" stroke="rgba(212,168,71,0.5)" stroke-width="1" fill="rgba(90,125,106,0.3)"/>
+                        <!-- roots -->
+                        <path d="M18 34 C16 34,13 36,11 34" stroke="rgba(138,173,151,0.4)" stroke-width="1" stroke-linecap="round"/>
+                        <path d="M18 34 C20 34,23 36,25 34" stroke="rgba(138,173,151,0.4)" stroke-width="1" stroke-linecap="round"/>
+                    </svg>
+                    <div class="hero-illus-label">
+                        <strong>Whole Plant</strong>
+                        Full specimen
+                    </div>
+                </div>
+
+                <!-- LEAF illustration -->
+                <div class="hero-illus-card">
+                    <svg class="hero-illus-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- leaf shape -->
+                        <path d="M18 33 C18 33,4 22,4 12 C4 5,10 2,18 4 C26 2,32 5,32 12 C32 22,18 33,18 33 Z"
+                              stroke="rgba(138,173,151,0.7)" stroke-width="1.2" fill="rgba(90,125,106,0.2)"/>
+                        <!-- main vein -->
+                        <line x1="18" y1="33" x2="18" y2="5" stroke="rgba(212,168,71,0.55)" stroke-width="0.9"/>
+                        <!-- left veins -->
+                        <line x1="18" y1="24" x2="10" y2="18" stroke="rgba(212,168,71,0.35)" stroke-width="0.7"/>
+                        <line x1="18" y1="18" x2="9"  y2="13" stroke="rgba(212,168,71,0.3)"  stroke-width="0.7"/>
+                        <line x1="18" y1="13" x2="11" y2="9"  stroke="rgba(212,168,71,0.25)" stroke-width="0.7"/>
+                        <!-- right veins -->
+                        <line x1="18" y1="24" x2="26" y2="18" stroke="rgba(212,168,71,0.35)" stroke-width="0.7"/>
+                        <line x1="18" y1="18" x2="27" y2="13" stroke="rgba(212,168,71,0.3)"  stroke-width="0.7"/>
+                        <line x1="18" y1="13" x2="25" y2="9"  stroke="rgba(212,168,71,0.25)" stroke-width="0.7"/>
+                    </svg>
+                    <div class="hero-illus-label">
+                        <strong>Leaf</strong>
+                        Vein pattern
+                    </div>
+                </div>
+
+                <!-- STEM illustration -->
+                <div class="hero-illus-card">
+                    <svg class="hero-illus-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- stem cylinder -->
+                        <rect x="14" y="3" width="8" height="30" rx="4"
+                              stroke="rgba(138,173,151,0.65)" stroke-width="1.1" fill="rgba(90,125,106,0.18)"/>
+                        <!-- bark texture lines -->
+                        <line x1="15" y1="9"  x2="21" y2="9"  stroke="rgba(212,168,71,0.3)" stroke-width="0.7" stroke-dasharray="1.5,1.5"/>
+                        <line x1="15" y1="14" x2="21" y2="14" stroke="rgba(212,168,71,0.3)" stroke-width="0.7" stroke-dasharray="1.5,1.5"/>
+                        <line x1="15" y1="19" x2="21" y2="19" stroke="rgba(212,168,71,0.3)" stroke-width="0.7" stroke-dasharray="1.5,1.5"/>
+                        <line x1="15" y1="24" x2="21" y2="24" stroke="rgba(212,168,71,0.3)" stroke-width="0.7" stroke-dasharray="1.5,1.5"/>
+                        <!-- small bud left -->
+                        <path d="M14 16 C10 15,8 12,10 10 C11 12,13 14,14 16 Z"
+                              stroke="rgba(138,173,151,0.5)" stroke-width="0.8" fill="rgba(90,125,106,0.2)"/>
+                        <!-- small bud right -->
+                        <path d="M22 22 C26 21,28 18,26 16 C25 18,23 20,22 22 Z"
+                              stroke="rgba(138,173,151,0.5)" stroke-width="0.8" fill="rgba(90,125,106,0.2)"/>
+                    </svg>
+                    <div class="hero-illus-label">
+                        <strong>Stem</strong>
+                        Bark &amp; nodes
+                    </div>
+                </div>
+
+            </div><!-- /hero-illustrations -->
+        </div><!-- /hero-body -->
+    </div>
+
+    <!-- Upload -->
+    <div class="upload-label">Specimen Upload</div>
+    <div class="upload-hint">{{ upload_hint }}</div>
+    <div class="drop-zone-wrap">
+        <div class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept=".jpg,.jpeg,.png" />
+            <span class="drop-zone-icon">🔬</span>
+            <div class="drop-zone-text">Drag &amp; drop an image here, or click to browse</div>
+            <div class="drop-zone-sub">JPG · JPEG · PNG</div>
+        </div>
+    </div>
+
+    <div id="preview-wrap">
+        <img id="preview-img" src="" alt="Uploaded specimen" />
+        <div class="img-caption">Uploaded specimen</div>
+    </div>
+
+    <button id="analyse-btn">Analyse Specimen</button>
+
+    <div class="spinner" id="spinner"><div class="spinner-ring"></div><span>Analysing specimen…</span></div>
+    <div class="error-msg" id="error-msg"></div>
+
+    <!-- 1. PLANT NAME + CONFIDENCE SCORE -->
+    <div class="result-card" id="result-card">
+        <div class="result-tag">Classification Result</div>
+        <div class="result-plant-name" id="result-name"></div>
+        <div class="result-subtitle" id="result-subtitle"></div>
+        <div class="confidence-label">
+            <span>Model Confidence</span>
+            <span class="confidence-value" id="conf-value"></span>
+        </div>
+        <div class="confidence-bar-bg"><div class="confidence-bar-fill" id="conf-bar"></div></div>
+    </div>
+
+    <!-- Scientific Info -->
+    <div class="info-card" id="sci-card">
+        <div class="detail-scientific" id="detail-scientific"></div>
+        <div class="detail-meta" id="detail-meta"></div>
+        <p class="detail-desc" id="detail-desc"></p>
+        <div class="compounds-label">Active Compounds</div>
+        <div class="compounds-wrap" id="compounds-wrap"></div>
+    </div>
+
+    <!-- 2. LEAF USES — Detailed & prominent -->
+    <div class="leaf-card" id="leaf-card">
+        <div class="card-heading">🍃 Leaf Uses — Detailed</div>
+        <ul class="uses-list" id="leaf-uses-list"></ul>
+    </div>
+
+    <!-- 3. ADDITIONAL DETAILS — General + By Parts + Industrial -->
+    <!-- General Medicinal Uses -->
+    <div class="info-card" id="general-card">
+        <div class="card-heading green">🌿 General Medicinal Uses</div>
+        <ul class="uses-list" id="general-uses-list"></ul>
+    </div>
+
+    <!-- Usage by Parts -->
+    <div class="info-card" id="parts-card">
+        <div class="card-heading forest">🌱 Usage by Plant Parts</div>
+        <div class="parts-tabs" id="parts-tabs"></div>
+        <div id="parts-panels"></div>
+    </div>
+
+    <!-- Industrial / Manufacturing Uses -->
+    <div class="info-card" id="industry-card">
+        <div class="card-heading">🏭 Industrial &amp; Manufacturing Uses</div>
+        <div class="industry-grid" id="industry-grid"></div>
+    </div>
+
+    <div class="app-footer"><p>Botanica · Medicinal Plant Classifier · For educational use only</p></div>
+</div>
+
+<script>
+
+// ── Show loader only on first visit per session ───────────────────────────
+(function() {
+    const loader = document.getElementById('screen-loader');
+    if (sessionStorage.getItem('botanica_visited')) {
+        loader.classList.add('fade-out');
+    } else {
+        document.getElementById('loader-btn').addEventListener('click', function() {
+            loader.classList.add('fade-out');
+            sessionStorage.setItem('botanica_visited', '1');
+        });
+    }
+})();
+
+// ── 3-D nav-tab mouse tilt ────────────────────────────────────────────────
+(function() {
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        let af;
+        tab.addEventListener('mousemove', e => {
+            if (tab.classList.contains('active')) return;
+            cancelAnimationFrame(af);
+            af = requestAnimationFrame(() => {
+                const r  = tab.getBoundingClientRect();
+                const x  = e.clientX - r.left;
+                const y  = e.clientY - r.top;
+                const cx = r.width  / 2;
+                const cy = r.height / 2;
+                const tX = ((y - cy) / cy) * -7;
+                const tY = ((x - cx) / cx) *  7;
+                tab.style.transform = `rotateX(${tX}deg) rotateY(${tY}deg) translateY(-5px)`;
+            });
+        });
+        tab.addEventListener('mouseleave', () => {
+            cancelAnimationFrame(af);
+            tab.style.transform = '';
+        });
+    });
+})();
+
+// ── 3-D drop-zone mouse tilt ───────────────────────────────────────────────
+(function() {
+    const zone = document.getElementById('drop-zone');
+    let animFrame;
+
+    zone.addEventListener('mousemove', e => {
+        if (zone.classList.contains('drag-over')) return;
+        cancelAnimationFrame(animFrame);
+        animFrame = requestAnimationFrame(() => {
+            const r   = zone.getBoundingClientRect();
+            const x   = e.clientX - r.left;
+            const y   = e.clientY - r.top;
+            const cx  = r.width  / 2;
+            const cy  = r.height / 2;
+            const tiltX = ((y - cy) / cy) * -6;   // max ±6deg vertical
+            const tiltY = ((x - cx) / cx) *  6;   // max ±6deg horizontal
+            zone.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-4px)`;
+        });
+    });
+
+    zone.addEventListener('mouseleave', () => {
+        cancelAnimationFrame(animFrame);
+        zone.style.transform = '';   // CSS class handles default
+    });
+})();
+
+// ── Upload / Preview ───────────────────────────────────────────────────────
+const fileInput   = document.getElementById('file-input');
+const dropZone    = document.getElementById('drop-zone');
+const previewWrap = document.getElementById('preview-wrap');
+const previewImg  = document.getElementById('preview-img');
+const analyseBtn  = document.getElementById('analyse-btn');
+const spinner     = document.getElementById('spinner');
+const errorMsg    = document.getElementById('error-msg');
+
+let selectedFile = null;
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+    selectedFile = file;
+    previewImg.src = URL.createObjectURL(file);
+    previewWrap.style.display = 'block';
+    analyseBtn.style.display  = 'inline-block';
+    hideResults();
+}
+
+function hideResults() {
+    ['result-card','sci-card','leaf-card','general-card','parts-card','industry-card']
+        .forEach(id => document.getElementById(id).style.display = 'none');
+    errorMsg.style.display = 'none';
+    document.getElementById('conf-bar').style.width = '0';
+}
+
+// ── Analyse ────────────────────────────────────────────────────────────────
+analyseBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    hideResults();
+    analyseBtn.disabled   = true;
+    spinner.style.display = 'flex';
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    try {
+        const res  = await fetch('/predict', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        if (!res.ok || data.error) { showError(data.error || 'Prediction failed.'); return; }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            sessionStorage.setItem('botanica_result', JSON.stringify({
+                ...data,
+                imageDataUrl: reader.result
+            }));
+            window.location.href = '/result';
+        };
+        reader.readAsDataURL(selectedFile);
+
+    } catch (err) {
+        showError('Network error. Please try again.');
+    } finally {
+        spinner.style.display = 'none';
+        analyseBtn.disabled   = false;
+    }
+});
+
+function buildList(arr) {
+    return arr.map(u => `<li><span class="use-dot">◆</span>${u}</li>`).join('');
+}
+
+function buildMeta(family, origin) {
+    const parts = [];
+    if (family) parts.push(`<span>${family}</span>`);
+    if (family && origin) parts.push(`<span class="detail-meta-sep">·</span>`);
+    if (origin) parts.push(`<span>${origin}</span>`);
+    return parts.join('');
+}
+
+function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+</script>
+</body>
+</html>
